@@ -2,7 +2,7 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PAGER 1997</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/svg+xml" href="icon.svg">
@@ -12,7 +12,6 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
-        /* TEMAS DINÂMICOS */
         :root {
             --main-color: #00ff80;
             --bg-screen: #001a00;
@@ -21,16 +20,22 @@
             --border-pager: #333;
         }
 
-        /* TEMA AMORODOO (AZUL) */
-        body.theme-amorodoo {
+        /* TEMAS DINÂMICOS */
+        body.theme-verde {
+            --main-color: #00ff80;
+            --bg-screen: #001a00;
+            --border-glow: rgba(0, 255, 100, 0.6);
+            --sub-color: #00cc66;
+        }
+
+        body.theme-azul {
             --main-color: #00d3ff;
             --bg-screen: #001a2b;
             --border-glow: rgba(0, 211, 255, 0.6);
             --sub-color: #0088cc;
         }
 
-        /* TEMA AMORODAA (ROSA) */
-        body.theme-amorodaa {
+        body.theme-rosa {
             --main-color: #ff66cc;
             --bg-screen: #2b001a;
             --border-glow: rgba(255, 102, 204, 0.6);
@@ -54,22 +59,28 @@
             padding: 15px; position: relative;
         }
 
-        .profile-bar {
-            display: flex; justify-content: space-between; align-items: center;
+        .config-bar {
+            display: flex; flex-direction: column; gap: 6px;
             margin-bottom: 10px; font-size: 1.1em;
         }
 
-        select {
+        .config-row {
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        input[type="text"], select {
             background: #000; color: var(--main-color);
             border: 1px solid var(--main-color);
             font-family: 'VT323', monospace; padding: 2px 8px;
             font-size: 1em; border-radius: 4px; outline: none;
         }
 
+        input[type="text"] { width: 140px; }
+
         .screen {
             background: var(--bg-screen);
             border: 4px solid var(--main-color);
-            border-radius: 8px; height: 320px; padding: 12px;
+            border-radius: 8px; height: 300px; padding: 12px;
             overflow-y: auto;
             box-shadow: inset 0 0 20px var(--border-glow);
             box-sizing: border-box;
@@ -79,9 +90,8 @@
         .msg-block { border-bottom: 1px dashed var(--sub-color); padding-bottom: 8px; margin-bottom: 10px; }
         .msg-header { font-size: 0.85em; color: var(--sub-color); }
         .msg-body { white-space: pre-wrap; word-break: break-word; font-size: 1.2em; }
-        .empty-state { text-align: center; margin-top: 120px; opacity: 0.6; }
+        .empty-state { text-align: center; margin-top: 110px; opacity: 0.6; }
 
-        /* PAINEL DE ENVIO */
         .send-panel { margin-top: 15px; display: flex; flex-direction: column; gap: 8px; }
         textarea {
             width: 100%; height: 60px; background: #000;
@@ -110,13 +120,19 @@
 <body>
 
     <div class="pager">
-        <div class="profile-bar">
-            <span>PERFIL:</span>
-            <select id="userSelect" onchange="changeProfile(this.value)">
-                <option value="amorodoo">Amorodoo 💙</option>
-                <option value="amorodaa">Amorodaa 💖</option>
-                
-            </select>
+        <div class="config-bar">
+            <div class="config-row">
+                <label for="usernameInput">NOME:</label>
+                <input type="text" id="usernameInput" maxlength="15" placeholder="Seu Nome" onchange="saveUsername(this.value)">
+            </div>
+            <div class="config-row">
+                <label for="themeSelect">TEMA:</label>
+                <select id="themeSelect" onchange="changeTheme(this.value)">
+                    <option value="verde">VERDE 📟</option>
+                    <option value="azul">AZUL 💙</option>
+                    <option value="rosa">ROSA 💖</option>
+                </select>
+            </div>
         </div>
 
         <div class="status" style="text-align: right; margin-bottom: 5px; font-size: 0.9em;">
@@ -133,7 +149,7 @@
             <textarea id="msgInput" placeholder="Escrever mensagem..."></textarea>
             <div class="controls">
                 <button onclick="enviarMensagem()">ENVIAR</button>
-                <button onclick="pedirNotificacoes()" style="flex:0.4;">🔔</button>
+                <button onclick="pedirNotificacoes()" style="flex:0.4;" title="Ativar Notificações">🔔</button>
             </div>
         </div>
 
@@ -142,34 +158,59 @@
 
     <script>
     // CONFIGURAÇÃO DO FIREBASE
-    const firebaseConfig = { databaseURL: "https://pager1997-7a567-default-rtdb.europe-west1.firebasedatabase.app/" };
+    const firebaseConfig = { databaseURL: "https://dualpager-1997-default-rtdb.europe-west1.firebasedatabase.app/" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database().ref('pagerMessages');
 
     const display = document.getElementById('display');
     const screen = document.getElementById('screen');
     const input = document.getElementById('msgInput');
-    const userSelect = document.getElementById('userSelect');
+    const usernameInput = document.getElementById('usernameInput');
+    const themeSelect = document.getElementById('themeSelect');
 
     let isInitialLoad = true;
 
-    // 1. GESTÃO DE PERFIL E TEMAS
-    function changeProfile(role) {
-        localStorage.setItem('pagerUserRole', role);
-        document.body.className = '';
-        
-        if (role === 'amorodoo') {
-            document.body.classList.add('theme-amorodoo');
-        } else if (role === 'amorodaa') {
-            document.body.classList.add('theme-amorodaa');
+    // 1. SOM RETRO BEEP (Web Audio API - sem necessidade de ficheiro MP3 externo)
+    function playRetroBeep() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'square'; // Onda quadrada para som retro 8-bit
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime); // Frequência A5
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15); // Beep curto de 150ms
+        } catch (e) {
+            console.log("Audio indisponível antes da interação do utilizador.");
         }
     }
 
-    const savedRole = localStorage.getItem('pagerUserRole') || 'amorodoo';
-    userSelect.value = savedRole;
-    changeProfile(savedRole);
+    // 2. GESTÃO DE NOME DE UTILIZADOR E TEMA
+    function saveUsername(val) {
+        const name = val.trim() || 'Anon';
+        localStorage.setItem('pagerUsername', name);
+    }
 
-    // 2. ENVIAR MENSAGEM
+    function changeTheme(theme) {
+        localStorage.setItem('pagerTheme', theme);
+        document.body.className = 'theme-' + theme;
+    }
+
+    // Carregar preferências guardadas
+    const savedName = localStorage.getItem('pagerUsername') || 'Utilizador';
+    usernameInput.value = savedName;
+
+    const savedTheme = localStorage.getItem('pagerTheme') || 'verde';
+    themeSelect.value = savedTheme;
+    changeTheme(savedTheme);
+
+    // 3. ENVIAR MENSAGEM
     function enviarMensagem() {
         const text = input.value.trim();
         if (!text) return;
@@ -177,9 +218,7 @@
         const now = new Date();
         const dateStr = now.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }).toUpperCase();
         const timeStr = now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
-
-        const currentRole = userSelect.value;
-        const senderName = currentRole === 'amorodoo' ? 'Amorodoo 💙' : (currentRole === 'amorodaa' ? 'Amorodaa 💖' : 'Anon');
+        const senderName = usernameInput.value.trim() || 'Anon';
 
         db.push({
             sender: senderName,
@@ -192,7 +231,7 @@
         input.value = '';
     }
 
-    // 3. RECEBER MENSAGENS E DISPARAR NOTIFICAÇÃO NO ANDROID
+    // 4. RECEBER MENSAGENS, SOM E NOTIFICAÇÃO
     db.on('value', (snapshot) => {
         const data = snapshot.val();
         if (!data) {
@@ -211,20 +250,21 @@
 
         screen.scrollTop = screen.scrollHeight;
 
-        // DISPARA NOTIFICAÇÃO SE FOR UMA NOVA MENSAGEM RECEBIDA
+        // BEEP E NOTIFICAÇÃO QUANDO RECEBE UMA NOVA MENSAGEM
         if (!isInitialLoad && messages.length > 0) {
             const lastMsg = messages[messages.length - 1];
-            const currentRole = userSelect.value;
-            const myName = currentRole === 'amorodoo' ? 'Amorodoo 💙' : 'Amorodaa 💖';
+            const myName = usernameInput.value.trim() || 'Anon';
 
-            // Só notifica se a mensagem veio da OUTRA pessoa
-            if (lastMsg.sender !== myName && Notification.permission === 'granted') {
-                if ('serviceWorker' in navigator) {
+            // Só notifica e toca o beep se a mensagem veio de OUTRA pessoa
+            if (lastMsg.sender !== myName) {
+                playRetroBeep();
+
+                if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
                     navigator.serviceWorker.ready.then(registration => {
                         registration.showNotification(`📟 ${lastMsg.sender}`, {
                             body: lastMsg.text,
-                            icon: 'icon.svg',
-                            badge: 'icon.svg',
+                            icon: 'icon-192.png',
+                            badge: 'icon-192.png',
                             vibrate: [200, 100, 200]
                         });
                     });
@@ -240,7 +280,7 @@
         return div.innerHTML.replace(/\n/g, '<br>');
     }
 
-    // 4. REGISTO PWA E PEDIDO DE NOTIFICAÇÕES
+    // 5. REGISTO PWA E PEDIDO DE NOTIFICAÇÕES
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js');
     }
@@ -256,6 +296,6 @@
             });
         }
     }
-</script>
+    </script>
 </body>
 </html>
