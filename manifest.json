@@ -1,11 +1,14 @@
 {
   "name": "Pager 1997",
-  "short_name": "Pager",
-  "description": "Pager Retro de Mensagens",
+  "short_name": "Pager1997",
+  "id": "com.pager1997.pwa",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#111111",
-  "theme_color": "#00ff80",
+  "theme_color": "#111111",
+  "lang": "pt",
   "icons": [
     {
       "src": "icon-192.png",
