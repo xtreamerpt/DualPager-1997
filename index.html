@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PAGER 1997</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="theme-color" content="#111111">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        /* TEMAS DINÂMICOS */
+        :root {
+            --main-color: #00ff80;
+            --bg-screen: #001a00;
+            --border-glow: rgba(0, 255, 100, 0.6);
+            --sub-color: #00cc66;
+            --border-pager: #333;
+        }
+
+        /* TEMA AMORODOO (AZUL) */
+        body.theme-amorodoo {
+            --main-color: #00d3ff;
+            --bg-screen: #001a2b;
+            --border-glow: rgba(0, 211, 255, 0.6);
+            --sub-color: #0088cc;
+        }
+
+        /* TEMA AMORODAA (ROSA) */
+        body.theme-amorodaa {
+            --main-color: #ff66cc;
+            --bg-screen: #2b001a;
+            --border-glow: rgba(255, 102, 204, 0.6);
+            --sub-color: #cc0088;
+        }
+
+        body {
+            margin: 0; padding: 0; min-height: 100vh;
+            background: #111; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            font-family: 'VT323', monospace; color: var(--main-color);
+            transition: all 0.3s ease;
+        }
+
+        .pager {
+            width: 340px; max-width: 90vw;
+            background: linear-gradient(#222, #1a1a1a);
+            border: 12px solid var(--border-pager);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+            padding: 15px; position: relative;
+        }
+
+        .profile-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 10px; font-size: 1.1em;
+        }
+
+        select {
+            background: #000; color: var(--main-color);
+            border: 1px solid var(--main-color);
+            font-family: 'VT323', monospace; padding: 2px 8px;
+            font-size: 1em; border-radius: 4px; outline: none;
+        }
+
+        .screen {
+            background: var(--bg-screen);
+            border: 4px solid var(--main-color);
+            border-radius: 8px; height: 320px; padding: 12px;
+            overflow-y: auto;
+            box-shadow: inset 0 0 20px var(--border-glow);
+            box-sizing: border-box;
+            scroll-behavior: smooth;
+        }
+
+        .msg-block { border-bottom: 1px dashed var(--sub-color); padding-bottom: 8px; margin-bottom: 10px; }
+        .msg-header { font-size: 0.85em; color: var(--sub-color); }
+        .msg-body { white-space: pre-wrap; word-break: break-word; font-size: 1.2em; }
+        .empty-state { text-align: center; margin-top: 120px; opacity: 0.6; }
+
+        /* PAINEL DE ENVIO */
+        .send-panel { margin-top: 15px; display: flex; flex-direction: column; gap: 8px; }
+        textarea {
+            width: 100%; height: 60px; background: #000;
+            border: 2px solid var(--main-color); border-radius: 6px;
+            color: var(--main-color); font-family: 'VT323', monospace;
+            padding: 8px; font-size: 1.1em; resize: none; box-sizing: border-box; outline: none;
+        }
+        
+        .controls { display: flex; gap: 8px; }
+        button {
+            flex: 1; background: #222; color: var(--main-color);
+            border: 2px solid var(--main-color); padding: 8px;
+            font-family: 'VT323', monospace; font-size: 1.2em; cursor: pointer;
+            box-shadow: 0 3px 0 var(--main-color);
+        }
+        button:active { transform: translateY(3px); box-shadow: none; }
+
+        .footer { text-align: center; color: var(--sub-color); font-size: 0.85em; margin-top: 10px; }
+        .blink { animation: blink 1s step-end infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+    </style>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+    <div class="pager">
+        <div class="profile-bar">
+            <span>PERFIL:</span>
+            <select id="userSelect" onchange="changeProfile(this.value)">
+                <option value="amorodoo">Amorodoo 💙</option>
+                <option value="amorodaa">Amorodaa 💖</option>
+                
+            </select>
+        </div>
+
+        <div class="status" style="text-align: right; margin-bottom: 5px; font-size: 0.9em;">
+            SIGNAL: ONLINE <span class="blink">●</span>
+        </div>
+
+        <!-- ECRÃ DO PAGER -->
+        <div class="screen" id="screen">
+            <div id="display"></div>
+        </div>
+
+        <!-- PAINEL DE ENVIO DIRETO -->
+        <div class="send-panel">
+            <textarea id="msgInput" placeholder="Escrever mensagem..."></textarea>
+            <div class="controls">
+                <button onclick="enviarMensagem()">ENVIAR</button>
+                <button onclick="pedirNotificacoes()" style="flex:0.4;">🔔</button>
+            </div>
+        </div>
+
+        <div class="footer">PAGER 1997 • PWA READY</div>
+    </div>
+
+    <script>
+    // CONFIGURAÇÃO DO FIREBASE
+    const firebaseConfig = { databaseURL: "https://pager1997-7a567-default-rtdb.europe-west1.firebasedatabase.app/" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref('pagerMessages');
+
+    const display = document.getElementById('display');
+    const screen = document.getElementById('screen');
+    const input = document.getElementById('msgInput');
+    const userSelect = document.getElementById('userSelect');
+
+    let isInitialLoad = true;
+
+    // 1. GESTÃO DE PERFIL E TEMAS
+    function changeProfile(role) {
+        localStorage.setItem('pagerUserRole', role);
+        document.body.className = '';
+        
+        if (role === 'amorodoo') {
+            document.body.classList.add('theme-amorodoo');
+        } else if (role === 'amorodaa') {
+            document.body.classList.add('theme-amorodaa');
+        }
+    }
+
+    const savedRole = localStorage.getItem('pagerUserRole') || 'amorodoo';
+    userSelect.value = savedRole;
+    changeProfile(savedRole);
+
+    // 2. ENVIAR MENSAGEM
+    function enviarMensagem() {
+        const text = input.value.trim();
+        if (!text) return;
+
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }).toUpperCase();
+        const timeStr = now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+
+        const currentRole = userSelect.value;
+        const senderName = currentRole === 'amorodoo' ? 'Amorodoo 💙' : (currentRole === 'amorodaa' ? 'Amorodaa 💖' : 'Anon');
+
+        db.push({
+            sender: senderName,
+            text: text,
+            date: dateStr,
+            time: timeStr,
+            timestamp: Date.now()
+        });
+
+        input.value = '';
+    }
+
+    // 3. RECEBER MENSAGENS E DISPARAR NOTIFICAÇÃO NO ANDROID
+    db.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (!data) {
+            display.innerHTML = '<div class="empty-state">SEM MENSAGENS...</div>';
+            return;
+        }
+
+        const messages = Object.values(data);
+
+        display.innerHTML = messages.map(msg => `
+            <div class="msg-block">
+                <div class="msg-header">> ${msg.sender || 'DE'} • ${msg.date} ${msg.time}</div>
+                <div class="msg-body">${escapeHtml(msg.text)}</div>
+            </div>
+        `).join('');
+
+        screen.scrollTop = screen.scrollHeight;
+
+        // DISPARA NOTIFICAÇÃO SE FOR UMA NOVA MENSAGEM RECEBIDA
+        if (!isInitialLoad && messages.length > 0) {
+            const lastMsg = messages[messages.length - 1];
+            const currentRole = userSelect.value;
+            const myName = currentRole === 'amorodoo' ? 'Amorodoo 💙' : 'Amorodaa 💖';
+
+            // Só notifica se a mensagem veio da OUTRA pessoa
+            if (lastMsg.sender !== myName && Notification.permission === 'granted') {
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.ready.then(registration => {
+                        registration.showNotification(`📟 ${lastMsg.sender}`, {
+                            body: lastMsg.text,
+                            icon: 'icon.svg',
+                            badge: 'icon.svg',
+                            vibrate: [200, 100, 200]
+                        });
+                    });
+                }
+            }
+        }
+        isInitialLoad = false;
+    });
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML.replace(/\n/g, '<br>');
+    }
+
+    // 4. REGISTO PWA E PEDIDO DE NOTIFICAÇÕES
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+    }
+
+    function pedirNotificacoes() {
+        if ('Notification' in window) {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    alert('✅ Notificações ativadas no Pager!');
+                } else {
+                    alert('❌ Permissão negada nas definições do Android.');
+                }
+            });
+        }
+    }
+</script>
+</body>
+</html>

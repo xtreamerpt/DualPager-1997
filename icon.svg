@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Outer App Icon Background -->
+  <rect width="512" height="512" rx="112" fill="#111111"/>
+  
+  <!-- Pager Plastic Casing -->
+  <rect x="66" y="86" width="380" height="340" rx="40" fill="#1e1e1e" stroke="#333333" stroke-width="16"/>
+  <rect x="86" y="106" width="340" height="300" rx="28" fill="none" stroke="#2a2a2a" stroke-width="4"/>
+  
+  <!-- Green LCD Screen -->
+  <rect x="116" y="136" width="280" height="170" rx="16" fill="#001a00" stroke="#00ff80" stroke-width="8"/>
+  
+  <!-- Screen Elements -->
+  <text x="140" y="180" font-family="monospace" font-size="26" fill="#00ff80" font-weight="bold">● PAGER 1997</text>
+  <text x="140" y="215" font-family="monospace" font-size="18" fill="#00cc66">SIGNAL: STRONG</text>
+  
+  <!-- Heart Icon on Screen -->
+  <path d="M 140 255 C 140 245 155 245 160 255 C 165 245 180 245 180 255 C 180 270 160 280 160 285 C 160 280 140 270 140 255 Z" fill="#ff66cc"/>
+  <text x="190" y="268" font-family="monospace" font-size="22" fill="#00ff80">AMOR 100%</text>
+
+  <!-- Pager Hardware Buttons -->
+  <rect x="116" y="330" width="130" height="45" rx="10" fill="#222222" stroke="#00d3ff" stroke-width="5"/>
+  <rect x="266" y="330" width="130" height="45" rx="10" fill="#222222" stroke="#ff66cc" stroke-width="5"/>
+</svg>
