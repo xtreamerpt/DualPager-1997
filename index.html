@@ -20,7 +20,6 @@
             --border-pager: #333;
         }
 
-        /* TEMAS DINÂMICOS */
         body.theme-verde {
             --main-color: #00ff80;
             --bg-screen: #001a00;
@@ -41,6 +40,24 @@
             --border-glow: rgba(255, 102, 204, 0.6);
             --sub-color: #cc0088;
         }
+        
+        /* TEMA ÂMBAR (MONITOR RETRO 80s) */
+        body.theme-ambar {
+            --main-color: #ffb000;
+            --bg-screen: #2b1a00;
+            --border-glow: rgba(255, 176, 0, 0.6);
+            --sub-color: #cc8800;
+        }
+
+        /* TEMA ROXO (CYBERPUNK) */
+        body.theme-roxo {
+            --main-color: #bf55ff;
+            --bg-screen: #1f002b;
+            --border-glow: rgba(191, 85, 255, 0.6);
+            --sub-color: #8800cc;
+        }
+
+        
 
         body {
             margin: 0; padding: 0; min-height: 100vh;
@@ -61,7 +78,7 @@
 
         .config-bar {
             display: flex; flex-direction: column; gap: 6px;
-            margin-bottom: 10px; font-size: 1.1em;
+            margin-bottom: 10px; font-size: 1em;
         }
 
         .config-row {
@@ -75,12 +92,18 @@
             font-size: 1em; border-radius: 4px; outline: none;
         }
 
-        input[type="text"] { width: 140px; }
+        input[type="text"] { width: 130px; text-transform: uppercase; }
+
+        .room-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #000; border: 1px dashed var(--sub-color);
+            padding: 4px 8px; margin-bottom: 8px; border-radius: 4px;
+        }
 
         .screen {
             background: var(--bg-screen);
             border: 4px solid var(--main-color);
-            border-radius: 8px; height: 300px; padding: 12px;
+            border-radius: 8px; height: 280px; padding: 12px;
             overflow-y: auto;
             box-shadow: inset 0 0 20px var(--border-glow);
             box-sizing: border-box;
@@ -90,11 +113,11 @@
         .msg-block { border-bottom: 1px dashed var(--sub-color); padding-bottom: 8px; margin-bottom: 10px; }
         .msg-header { font-size: 0.85em; color: var(--sub-color); }
         .msg-body { white-space: pre-wrap; word-break: break-word; font-size: 1.2em; }
-        .empty-state { text-align: center; margin-top: 110px; opacity: 0.6; }
+        .empty-state { text-align: center; margin-top: 100px; opacity: 0.6; }
 
         .send-panel { margin-top: 15px; display: flex; flex-direction: column; gap: 8px; }
         textarea {
-            width: 100%; height: 60px; background: #000;
+            width: 100%; height: 55px; background: #000;
             border: 2px solid var(--main-color); border-radius: 6px;
             color: var(--main-color); font-family: 'VT323', monospace;
             padding: 8px; font-size: 1.1em; resize: none; box-sizing: border-box; outline: none;
@@ -103,15 +126,30 @@
         .controls { display: flex; gap: 8px; }
         button {
             flex: 1; background: #222; color: var(--main-color);
-            border: 2px solid var(--main-color); padding: 8px;
-            font-family: 'VT323', monospace; font-size: 1.2em; cursor: pointer;
+            border: 2px solid var(--main-color); padding: 6px;
+            font-family: 'VT323', monospace; font-size: 1.1em; cursor: pointer;
             box-shadow: 0 3px 0 var(--main-color);
         }
         button:active { transform: translateY(3px); box-shadow: none; }
+        .btn-small { flex: 0.4; font-size: 0.9em; padding: 2px 6px; }
 
         .footer { text-align: center; color: var(--sub-color); font-size: 0.85em; margin-top: 10px; }
         .blink { animation: blink 1s step-end infinite; }
         @keyframes blink { 50% { opacity: 0; } }
+
+        /* MODAL POP-UP RETRO */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); display: flex;
+            align-items: center; justify-content: center; z-index: 1000;
+        }
+        .modal-body {
+            background: #111; border: 4px solid var(--main-color);
+            padding: 20px; width: 280px; text-align: center;
+            box-shadow: 0 0 15px var(--border-glow); border-radius: 8px;
+        }
+        .modal-body h3 { margin-top: 0; }
+        .modal-body input { width: 90%; margin: 10px 0; text-align: center; font-size: 1.2em; }
     </style>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -123,7 +161,7 @@
         <div class="config-bar">
             <div class="config-row">
                 <label for="usernameInput">NOME:</label>
-                <input type="text" id="usernameInput" maxlength="15" placeholder="Seu Nome" onchange="saveUsername(this.value)">
+                <input type="text" id="usernameInput" maxlength="12" placeholder="Seu Nome" onchange="saveUsername(this.value)">
             </div>
             <div class="config-row">
                 <label for="themeSelect">TEMA:</label>
@@ -131,11 +169,20 @@
                     <option value="verde">VERDE 📟</option>
                     <option value="azul">AZUL 💙</option>
                     <option value="rosa">ROSA 💖</option>
+                    <option value="ambar">ÂMBAR 🧡</option>
+                    <option value="roxo">ROXO 👾</option>
                 </select>
             </div>
         </div>
 
-        <div class="status" style="text-align: right; margin-bottom: 5px; font-size: 0.9em;">
+        <!-- BARRINHA DA FREQUÊNCIA / SALA -->
+        <div class="room-bar">
+            <span id="roomDisplay">FREQ: ---</span>
+            <span id="membersDisplay">MEMBROS: 0/5</span>
+            <button class="btn-small" onclick="openRoomModal()">🔗 MUDAR</button>
+        </div>
+
+        <div class="status" style="text-align: right; margin-bottom: 5px; font-size: 0.85em;">
             SIGNAL: ONLINE <span class="blink">●</span>
         </div>
 
@@ -144,54 +191,69 @@
             <div id="display"></div>
         </div>
 
-        <!-- PAINEL DE ENVIO DIRETO -->
+        <!-- PAINEL DE ENVIO -->
         <div class="send-panel">
             <textarea id="msgInput" placeholder="Escrever mensagem..."></textarea>
             <div class="controls">
                 <button onclick="enviarMensagem()">ENVIAR</button>
-                <button onclick="pedirNotificacoes()" style="flex:0.4;" title="Ativar Notificações">🔔</button>
+                <button onclick="pedirNotificacoes()" style="flex:0.3;" title="Ativar Notificações">🔔</button>
             </div>
         </div>
 
-        <div class="footer">PAGER 1997 • PWA READY</div>
+        <div class="footer">PAGER 1997 • MULTI-FREQ READY</div>
+    </div>
+
+    <!-- MODAL SINTONIZAR FREQUÊNCIA -->
+    <div id="roomModal" class="modal-overlay" style="display: none;">
+        <div class="modal-body">
+            <h3>📟 SINTONIZAR FREQUÊNCIA</h3>
+            <p style="font-size: 0.9em; color: var(--sub-color);">Introduza o código da sala de conversa (Máx. 5 pessoas):</p>
+            <input type="text" id="roomInput" placeholder="EX: RETRO99" maxlength="10">
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+                <button onclick="confirmRoom()">SINTONIZAR</button>
+            </div>
+        </div>
     </div>
 
     <script>
-    // CONFIGURAÇÃO DO FIREBASE
     const firebaseConfig = { databaseURL: "https://dualpager-1997-default-rtdb.europe-west1.firebasedatabase.app/" };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database().ref('pagerMessages');
+    const database = firebase.database();
 
     const display = document.getElementById('display');
     const screen = document.getElementById('screen');
     const input = document.getElementById('msgInput');
     const usernameInput = document.getElementById('usernameInput');
     const themeSelect = document.getElementById('themeSelect');
+    const roomDisplay = document.getElementById('roomDisplay');
+    const membersDisplay = document.getElementById('membersDisplay');
+    const roomModal = document.getElementById('roomModal');
+    const roomInput = document.getElementById('roomInput');
 
+    let currentUserId = localStorage.getItem('pagerUserId') || 'USER_' + Math.random().toString(36).substr(2, 6).toUpperCase();
+    localStorage.setItem('pagerUserId', currentUserId);
+
+    let currentRoom = localStorage.getItem('pagerRoom') || '';
+    let currentRoomRef = null;
     let isInitialLoad = true;
 
-    // 1. SOM RETRO BEEP (Web Audio API - sem necessidade de ficheiro MP3 externo)
+    // 1. SOM RETRO BEEP
     function playRetroBeep() {
         try {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-
-            osc.type = 'square'; // Onda quadrada para som retro 8-bit
-            osc.frequency.setValueAtTime(880, audioCtx.currentTime); // Frequência A5
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime);
             gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-
             osc.connect(gain);
             gain.connect(audioCtx.destination);
-
             osc.start();
-            osc.stop(audioCtx.currentTime + 0.15); // Beep curto de 150ms
-        } catch (e) {
-            console.log("Audio indisponível antes da interação do utilizador.");
-        }
+            osc.stop(audioCtx.currentTime + 0.15);
+        } catch (e) {}
     }
 
-    // 2. GESTÃO DE NOME DE UTILIZADOR E TEMA
+    // 2. GESTÃO DE UTILIZADOR E TEMA
     function saveUsername(val) {
         const name = val.trim() || 'Anon';
         localStorage.setItem('pagerUsername', name);
@@ -202,26 +264,122 @@
         document.body.className = 'theme-' + theme;
     }
 
-    // Carregar preferências guardadas
-    const savedName = localStorage.getItem('pagerUsername') || 'Utilizador';
-    usernameInput.value = savedName;
+    usernameInput.value = localStorage.getItem('pagerUsername') || 'Utilizador';
+    themeSelect.value = localStorage.getItem('pagerTheme') || 'verde';
+    changeTheme(themeSelect.value);
 
-    const savedTheme = localStorage.getItem('pagerTheme') || 'verde';
-    themeSelect.value = savedTheme;
-    changeTheme(savedTheme);
+    // 3. GESTÃO DE SALAS / FREQUÊNCIAS
+    function openRoomModal() {
+        roomInput.value = currentRoom;
+        roomModal.style.display = 'flex';
+    }
 
-    // 3. ENVIAR MENSAGEM
+    function confirmRoom() {
+        const roomCode = roomInput.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (!roomCode) {
+            alert('⚠️ Insira um código de sala válido!');
+            return;
+        }
+        sintonizarSala(roomCode);
+    }
+
+    function sintonizarSala(roomCode) {
+        const roomRef = database.ref(`rooms/${roomCode}`);
+
+        roomRef.child('members').once('value', (snapshot) => {
+            const members = snapshot.val() || {};
+            const memberKeys = Object.keys(members);
+
+            // Verifica se o utilizador já pertence à sala ou se a sala tem espaço (< 5)
+            if (!members[currentUserId] && memberKeys.length >= 5) {
+                alert('⚠️ FREQUÊNCIA CHEIA! Limite máximo de 5 utilizadores atingido.');
+                return;
+            }
+
+            // Regista utilizador na sala
+            roomRef.child(`members/${currentUserId}`).set({
+                name: usernameInput.value.trim() || 'Anon',
+                lastSeen: Date.now()
+            });
+
+            // Se mudou de sala, limpa a escuta anterior
+            if (currentRoomRef) {
+                currentRoomRef.off();
+            }
+
+            currentRoom = roomCode;
+            localStorage.setItem('pagerRoom', currentRoom);
+            roomDisplay.innerText = `FREQ: ${currentRoom}`;
+            roomModal.style.display = 'none';
+            isInitialLoad = true;
+
+            // Escuta total de membros
+            roomRef.child('members').on('value', (mSnap) => {
+                const count = mSnap.val() ? Object.keys(mSnap.val()).length : 0;
+                membersDisplay.innerText = `MEMBROS: ${count}/5`;
+            });
+
+            // Escuta mensagens da nova sala
+            currentRoomRef = roomRef.child('messages');
+            conectarListenerMensagens();
+        });
+    }
+
+    // 4. ESCUTA E ENVIO DE MENSAGENS
+    function conectarListenerMensagens() {
+        currentRoomRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (!data) {
+                display.innerHTML = '<div class="empty-state">FREQUÊNCIA VAZIA...</div>';
+                return;
+            }
+
+            const messages = Object.values(data);
+            display.innerHTML = messages.map(msg => `
+                <div class="msg-block">
+                    <div class="msg-header">> ${msg.sender || 'DE'} • ${msg.date} ${msg.time}</div>
+                    <div class="msg-body">${escapeHtml(msg.text)}</div>
+                </div>
+            `).join('');
+
+            screen.scrollTop = screen.scrollHeight;
+
+            if (!isInitialLoad && messages.length > 0) {
+                const lastMsg = messages[messages.length - 1];
+                if (lastMsg.userId !== currentUserId) {
+                    playRetroBeep();
+                    if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
+                        navigator.serviceWorker.ready.then(registration => {
+                            registration.showNotification(`📟 FREQ [${currentRoom}] - ${lastMsg.sender}`, {
+                                body: lastMsg.text,
+                                icon: 'icon-192.png',
+                                badge: 'icon-192.png',
+                                vibrate: [200, 100, 200]
+                            });
+                        });
+                    }
+                }
+            }
+            isInitialLoad = false;
+        });
+    }
+
     function enviarMensagem() {
+        if (!currentRoom) {
+            openRoomModal();
+            return;
+        }
+
         const text = input.value.trim();
         if (!text) return;
 
         const now = new Date();
         const dateStr = now.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }).toUpperCase();
         const timeStr = now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
-        const senderName = usernameInput.value.trim() || 'Anon';
 
-        db.push({
-            sender: senderName,
+        database.ref(`rooms/${currentRoom}/messages`).push({
+            userId: currentUserId,
+            sender: usernameInput.value.trim() || 'Anon',
             text: text,
             date: dateStr,
             time: timeStr,
@@ -231,56 +389,13 @@
         input.value = '';
     }
 
-    // 4. RECEBER MENSAGENS, SOM E NOTIFICAÇÃO
-    db.on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (!data) {
-            display.innerHTML = '<div class="empty-state">SEM MENSAGENS...</div>';
-            return;
-        }
-
-        const messages = Object.values(data);
-
-        display.innerHTML = messages.map(msg => `
-            <div class="msg-block">
-                <div class="msg-header">> ${msg.sender || 'DE'} • ${msg.date} ${msg.time}</div>
-                <div class="msg-body">${escapeHtml(msg.text)}</div>
-            </div>
-        `).join('');
-
-        screen.scrollTop = screen.scrollHeight;
-
-        // BEEP E NOTIFICAÇÃO QUANDO RECEBE UMA NOVA MENSAGEM
-        if (!isInitialLoad && messages.length > 0) {
-            const lastMsg = messages[messages.length - 1];
-            const myName = usernameInput.value.trim() || 'Anon';
-
-            // Só notifica e toca o beep se a mensagem veio de OUTRA pessoa
-            if (lastMsg.sender !== myName) {
-                playRetroBeep();
-
-                if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
-                    navigator.serviceWorker.ready.then(registration => {
-                        registration.showNotification(`📟 ${lastMsg.sender}`, {
-                            body: lastMsg.text,
-                            icon: 'icon-192.png',
-                            badge: 'icon-192.png',
-                            vibrate: [200, 100, 200]
-                        });
-                    });
-                }
-            }
-        }
-        isInitialLoad = false;
-    });
-
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML.replace(/\n/g, '<br>');
     }
 
-    // 5. REGISTO PWA E PEDIDO DE NOTIFICAÇÕES
+    // Inicialização
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js');
     }
@@ -295,6 +410,13 @@
                 }
             });
         }
+    }
+
+    // Abrir modal automaticamente se ainda não tiver sala definida
+    if (!currentRoom) {
+        openRoomModal();
+    } else {
+        sintonizarSala(currentRoom);
     }
     </script>
 </body>
