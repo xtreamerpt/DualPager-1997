@@ -256,10 +256,31 @@
     }
 
     // 2. GESTÃO DE UTILIZADOR E TEMA
-    function saveUsername(val) {
-        const name = val.trim() || 'Anon';
-        localStorage.setItem('pagerUsername', name);
+    // 1. Valida o nome quando o utilizador o altera no campo
+function saveUsername(val) {
+    const newName = val.trim() || 'Anon';
+    const oldName = localStorage.getItem('pagerUsername') || 'Utilizador';
+
+    if (currentRoom) {
+        database.ref(`rooms/${currentRoom}/members`).once('value', (snapshot) => {
+            const members = snapshot.val() || {};
+            const nameTaken = Object.entries(members).some(([id, m]) => 
+                id !== currentUserId && m.name && m.name.toLowerCase() === newName.toLowerCase()
+            );
+
+            if (nameTaken) {
+                alert('⚠️ Este nome já está a ser utilizado nesta sala!');
+                usernameInput.value = oldName; // Reverte para o nome anterior
+                return;
+            }
+
+            localStorage.setItem('pagerUsername', newName);
+            database.ref(`rooms/${currentRoom}/members/${currentUserId}/name`).set(newName);
+        });
+    } else {
+        localStorage.setItem('pagerUsername', newName);
     }
+}
 
     function changeTheme(theme) {
         localStorage.setItem('pagerTheme', theme);
@@ -285,47 +306,57 @@
         sintonizarSala(roomCode);
     }
 
-    function sintonizarSala(roomCode) {
-        const roomRef = database.ref(`rooms/${roomCode}`);
+    // 2. Valida o nome ao sintonizar/entrar numa nova sala
+function sintonizarSala(roomCode) {
+    const roomRef = database.ref(`rooms/${roomCode}`);
+    const desiredName = (usernameInput.value.trim() || 'Anon').toLowerCase();
 
-        roomRef.child('members').once('value', (snapshot) => {
-            const members = snapshot.val() || {};
-            const memberKeys = Object.keys(members);
+    roomRef.child('members').once('value', (snapshot) => {
+        const members = snapshot.val() || {};
+        const memberKeys = Object.keys(members);
 
-            // Verifica se o utilizador já pertence à sala ou se a sala tem espaço (< 5)
-            if (!members[currentUserId] && memberKeys.length >= 5) {
-                alert('⚠️ FREQUÊNCIA CHEIA! Limite máximo de 5 utilizadores atingido.');
-                return;
-            }
+        // Validação A: Nome já em uso por outro membro da sala
+        const nameTaken = Object.entries(members).some(([id, m]) => 
+            id !== currentUserId && m.name && m.name.toLowerCase() === desiredName
+        );
 
-            // Regista utilizador na sala
-            roomRef.child(`members/${currentUserId}`).set({
-                name: usernameInput.value.trim() || 'Anon',
-                lastSeen: Date.now()
-            });
+        if (nameTaken) {
+            alert('⚠️ Este nome já está em uso nesta frequência! Altere o seu nome antes de entrar.');
+            openRoomModal();
+            return;
+        }
 
-            // Se mudou de sala, limpa a escuta anterior
-            if (currentRoomRef) {
-                currentRoomRef.off();
-            }
+        // Validação B: Limite de 5 utilizadores
+        if (!members[currentUserId] && memberKeys.length >= 5) {
+            alert('⚠️ FREQUÊNCIA CHEIA! Limite máximo de 5 utilizadores atingido.');
+            return;
+        }
 
-            currentRoom = roomCode;
-            localStorage.setItem('pagerRoom', currentRoom);
-            roomDisplay.innerText = `FREQ: ${currentRoom}`;
-            roomModal.style.display = 'none';
-            isInitialLoad = true;
-
-            // Escuta total de membros
-            roomRef.child('members').on('value', (mSnap) => {
-                const count = mSnap.val() ? Object.keys(mSnap.val()).length : 0;
-                membersDisplay.innerText = `MEMBROS: ${count}/5`;
-            });
-
-            // Escuta mensagens da nova sala
-            currentRoomRef = roomRef.child('messages');
-            conectarListenerMensagens();
+        // Regista o utilizador na sala
+        roomRef.child(`members/${currentUserId}`).set({
+            name: usernameInput.value.trim() || 'Anon',
+            lastSeen: Date.now()
         });
-    }
+
+        if (currentRoomRef) {
+            currentRoomRef.off();
+        }
+
+        currentRoom = roomCode;
+        localStorage.setItem('pagerRoom', currentRoom);
+        roomDisplay.innerText = `FREQ: ${currentRoom}`;
+        roomModal.style.display = 'none';
+        isInitialLoad = true;
+
+        roomRef.child('members').on('value', (mSnap) => {
+            const count = mSnap.val() ? Object.keys(mSnap.val()).length : 0;
+            membersDisplay.innerText = `MEMBROS: ${count}/5`;
+        });
+
+        currentRoomRef = roomRef.child('messages');
+        conectarListenerMensagens();
+    });
+}
 
     // 4. ESCUTA E ENVIO DE MENSAGENS
     function conectarListenerMensagens() {
